@@ -1,85 +1,128 @@
-# Python Template 🐍
-[![PyPI version](https://img.shields.io/pypi/v/python-template-zuppif)](https://pypi.org/project/python-template-zuppif/)
+# Numbeo API MCP Server 🌍
 
-A template for a python project for 2025
+FastMCP server wrapping the [Numbeo API](https://www.numbeo.com/api/doc.jsp), providing data on cost of living, property prices, and crime rates worldwide.
 
-Features:
-- [x] 🛠️ configuration in a single file [`pyproject.toml`](pyproject.toml)
-- [x] 📦 [`uv`](https://docs.astral.sh/uv/) as package manager
-- [x] 💅 [`ruff`](https://docs.astral.sh/ruff/) for linting and formatting
-- [x] 🧪 [`pytest`](https://docs.pytest.org/en/stable/) 
-- [x] 🧹 [`Makefile`](Makefile) with code quality checks
-- [ ] 📚 auto doc generation
-- [x] 🐳 CI/CD Optimized Docker Image runs when a new *release* is created pushing to gh registry
-- [x] 🦾 GitHub actions:
-    - [x] auto publish to [`pypi`](https://pypi.org/) on push on `main`
-    - [ ] auto creating a new tag on push on `main`, sync versions
-    - [x] run `tests` and `lint` on `dev` and `main` when a PR is open
+## Features
 
-## Getting started
+- 🏙️ **Cost of Living Data**: Get current and historical prices for cities and countries
+- 🏠 **Property Prices**: Access real estate market data
+- 🚨 **Crime Statistics**: Retrieve safety and crime indices
+- 📊 **City Indices**: Compare quality of life, healthcare, traffic, and pollution metrics
+- 🏆 **Rankings**: Global and country-specific city rankings
+- 🔐 **Secure API Access**: Uses API key as query parameter (as per Numbeo API specification)
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.12 or higher
+- A Numbeo API key (obtain from [Numbeo API](https://www.numbeo.com/api/))
 
 ### Installation
 
-To set it up and run
+To set up and run:
+
+```bash
+pip install -e .
+```
+
+Or using uv:
 
 ```bash
 uv sync
 ```
 
-Then
+### Configuration
+
+Set your Numbeo API key as an environment variable:
 
 ```bash
-python main.py
+export NUMBEO_API_KEY="your-api-key-here"
 ```
 
-Will output a random joke
+Or create a `.env` file in the project root:
 
 ```
-Why did the cow in the pasture get promoted at work? ...  Because he is OUT-STANDING in his field!
+NUMBEO_API_KEY=your-api-key-here
 ```
 
-You can now run, for example, a function defined as `scripts` in the [`pyproject.toml`](pyproject.toml)
+### Running the Server
+
+Start the MCP server:
 
 ```bash
-make_me_laugh
+numbeo-mcp
 ```
+
+The server will start and expose the following MCP tools:
+
+## Available Tools
+
+### Cost of Living Tools
+
+- **`get_city_cost_of_living`**: Get current prices for goods and services in a city
+- **`get_city_cost_of_living_archive`**: Get historical price data
+- **`get_city_indices`**: Get cost of living, rent, and purchasing power indices
+- **`get_country_prices`**: Get average prices for an entire country
+
+### Quality of Life Tools
+
+- **`get_city_healthcare`**: Healthcare quality indices
+- **`get_city_traffic`**: Traffic and commute data
+- **`get_city_pollution`**: Environmental quality metrics
+
+### Safety Tools
+
+- **`get_city_crime_statistics`**: Crime rates and safety indices
+
+### Rankings Tools
+
+- **`get_city_rankings`**: Global city rankings by category
+- **`get_country_city_rankings`**: City rankings within a specific country
+
+### Example Usage
+
+```python
+# Using the MCP tools through your MCP client
+# Example: Get cost of living for New York
+result = get_city_cost_of_living(city="New York", country="United States")
+
+# Get crime statistics for London
+crime_data = get_city_crime_statistics(city="London", country="United Kingdom")
+
+# Get global cost of living rankings
+rankings = get_city_rankings(section="cost-of-living")
+```
+
+## Development
 
 ### Linting
 
-```
+```bash
 ruff check
 ```
 
-
 ### Formatting
 
-```
+```bash
 ruff format
 ```
 
-## CI/CD
-
-### Tests
-Tests inside `/tests` are run using [`pytest`](https://docs.pytest.org/en/stable/) on PR both on `dev` and `main`
-
-### Publish Package
- In order to publish to [pypi](https://pypi.org/) you need to create a publisher on pypi.
-
-This is explained [here](https://packaging.python.org/en/latest/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/) and [here](https://docs.pypi.org/trusted-publishers/) 
-
-In practice go your pypi project -> Manage Project -> Publishing, scroll and "add a new publisher"
-
-
-### Docker
-[`Dockerfile`](Dockerfile) contains a multi stage build that uses `--compile-bytecode` to compite your package. For this example, the resulting image is just
+### Running Tests
 
 ```bash
-docker build -t python-template .
+pytest tests/
 ```
 
-```
-REPOSITORY        TAG       IMAGE ID       CREATED          SIZE
-python-template   latest    1ded7d260b1c   58 seconds ago   55.4MB
-```
+## API Reference
 
-The image is build using the [`build`](.github/workflows/build.yml) workflow when a new *release* is created
+This server wraps the Numbeo API endpoints. For detailed information about the data returned, see the [Numbeo API Documentation](https://www.numbeo.com/api/doc.jsp).
+
+Key API features:
+- All requests include the API key as a query parameter
+- No authentication headers required
+- Returns JSON data with comprehensive city/country statistics
+
+## License
+
+See [LICENSE](LICENSE) file for details.
