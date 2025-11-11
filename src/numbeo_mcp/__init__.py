@@ -1,9 +1,11 @@
-"""Numbeo API MCP Server.
+"""Numbeo MCP Server - FastMCP server for the Numbeo API.
 
-FastMCP server wrapping the Numbeo API for accessing cost of living,
-property prices, and crime statistics data.
+This server provides MCP tools for accessing Numbeo API data with
+strict validation and proper authentication handling.
 """
 
-from .server import main
+__version__ = "0.1.0"
 
-__all__ = ["main"]
+from .server import main, mcp
+
+__all__ = ["main", "mcp"]

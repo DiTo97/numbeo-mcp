@@ -2,7 +2,7 @@
 
 import pytest
 
-from numbeo_mcp_new.server import mcp
+from numbeo_mcp.server import mcp
 
 
 class TestMCPServerIntegration:
@@ -60,7 +60,7 @@ class TestMCPServerIntegration:
 
     def test_server_imports(self):
         """Test that all necessary modules can be imported."""
-        from numbeo_mcp_new import main, mcp
+        from numbeo_mcp import main, mcp
         from numbeo_sdk import NumbeoClient
 
         # Verify imports are successful
