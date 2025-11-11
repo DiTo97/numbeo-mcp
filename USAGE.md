@@ -1,5 +1,11 @@
 # Numbeo API MCP Server - Usage Guide
 
+## Architecture
+
+This project consists of two packages:
+- **`numbeo-sdk`**: Standalone Python client for the Numbeo API
+- **`numbeo-mcp`**: FastMCP server that exposes SDK functionality as MCP tools
+
 ## Quick Start
 
 1. **Install the server:**
@@ -7,21 +13,27 @@
    pip install -e .
    ```
 
-2. **Set your API key:**
-   ```bash
-   export NUMBEO_API_KEY="your-api-key-here"
-   ```
+2. **Authentication:**
    
-   Or create a `.env` file:
-   ```bash
-   cp .env.example .env
-   # Edit .env and add your API key
-   ```
+   The MCP server expects the API key to be provided by the MCP client (not via environment variables). The client should pass the API key through:
+   - `api_key` field in request metadata, OR
+   - `Authorization: Bearer <api-key>` header
+   
+   The MCP server propagates the API key to the SDK without verification.
 
 3. **Start the server:**
    ```bash
    numbeo-mcp
    ```
+
+## Authentication Flow
+
+```
+MCP Client → MCP Server → Numbeo SDK → Numbeo API
+  (Bearer)    (propagate)   (use in query params)
+```
+
+The server does NOT verify the API key. It simply passes it to the SDK, which includes it as a query parameter in Numbeo API requests.
 
 ## Available MCP Tools
 
@@ -116,45 +128,50 @@ Get city rankings within a specific country.
 - `country` (string, required): Name of the country
 - `section` (string, optional): Same options as `get_city_rankings`
 
+## Vocabulary Resource
+
+The server provides a `vocabulary://numbeo-terms` resource that explains terminology used in Numbeo API responses:
+
+- **`contributors12months`**: The number of contributors who have submitted data in the past 12 months
+- **`monthLastUpdate`**: The month when the data was last updated
+- **`yearLastUpdate`**: The year of the last update
+- **`contributors`**: The total number of contributors whose data was used in the calculations (as we use an adaptive archive policy)
+- **`cpi_factor`**: A factor used to calculate our Consumer Price Index. Multiply this factor by the prices and add the result to the overall sum to compute the Cost of Living Index.
+- **`rent_factor`**: A factor used to calculate our Rent Index. Multiply this factor by the prices and add the result to the overall sum to compute the Rent Index.
+
 ## Using with MCP Clients
 
 ### Claude Desktop
 
-1. Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+The MCP client should provide the API key through request metadata or authorization headers. Example configuration:
 
 ```json
 {
   "mcpServers": {
     "numbeo": {
-      "command": "numbeo-mcp",
-      "env": {
-        "NUMBEO_API_KEY": "your-api-key-here"
-      }
+      "command": "numbeo-mcp"
     }
   }
 }
 ```
 
-2. Restart Claude Desktop
-
-3. You can now ask Claude questions like:
-   - "What is the cost of living in Tokyo?"
-   - "Compare crime rates between New York and London"
-   - "Show me the healthcare quality index for Berlin"
+Then pass the API key in tool calls via the client's authorization mechanism.
 
 ### Other MCP Clients
 
-The server supports standard MCP protocol over stdio. Consult your MCP client's documentation for configuration.
+The server supports standard MCP protocol over stdio. API key should be passed through:
+- Request metadata (`api_key` field), or
+- Authorization header (`Authorization: Bearer <key>`)
 
-## Direct API Usage
+## Direct SDK Usage
 
-You can also use the Numbeo client directly in your Python code:
+You can use the Numbeo SDK directly in your Python code:
 
 ```python
-from numbeo_mcp.client import NumberoAPIClient
+from numbeo_sdk import NumbeoClient
 
-# Initialize client
-client = NumberoAPIClient(api_key="your-api-key")
+# Initialize client with API key
+client = NumbeoClient(api_key="your-api-key")
 
 # Get cost of living data
 data = client.get_city_prices("London", "United Kingdom")
@@ -169,6 +186,17 @@ rankings = client.get_rankings("cost-of-living")
 print(rankings)
 ```
 
+## Validation
+
+The MCP server uses **strict input validation** with Pydantic schemas. All tool parameters are validated before being passed to the SDK:
+
+- **CityQueryParams**: city (required), country (optional)
+- **CityArchiveQueryParams**: city, country, currency (all validated)
+- **RankingsQueryParams**: section with enum validation
+- And more...
+
+Invalid inputs will be rejected with clear error messages.
+
 ## API Rate Limits
 
 The Numbeo API may have rate limits depending on your subscription level. Refer to [Numbeo API documentation](https://www.numbeo.com/api/doc.jsp) for details.
@@ -177,18 +205,19 @@ The Numbeo API may have rate limits depending on your subscription level. Refer 
 
 ### "Numbeo API key is required" error
 
-Make sure the `NUMBEO_API_KEY` environment variable is set:
-```bash
-export NUMBEO_API_KEY="your-key"
-```
-
-Or use a `.env` file in the project root.
+The API key must be provided by the MCP client through authorization headers or request metadata, not environment variables. Check your MCP client configuration.
 
 ### Connection timeout
 
 Check your internet connection and verify that the Numbeo API is accessible.
 
 ### Invalid API response
+
+Ensure your API key is valid and your subscription is active.
+
+### Validation errors
+
+The server uses strict Pydantic validation. Make sure all required fields are provided and enum values are correct (e.g., section must be one of: "cost-of-living", "crime", "health-care", "pollution", "traffic", "quality-of-life").
 
 Ensure your API key is valid and your subscription is active.
 
