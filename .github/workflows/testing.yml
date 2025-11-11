@@ -1,10 +1,10 @@
-name: Test
+name: Testing
 on:
   pull_request:
-    branches: [main, dev]
+    branches: [main]
 
 jobs:
-  build-lint-format-and-test:
+  lint-and-test:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,12 +20,13 @@ jobs:
           python-version-file: ".python-version"
 
       - name: 🦾 Install the project
-        run: |
-          uv sync --all-extras --dev
-          uv pip install -e .
+        run: uv sync --dev
 
-      - name: 💅 Link & Format Check
-        run: make check_code_quality
+      - name: 💅 Linting
+        run: make linting
 
       - name: 🧪 Test
-        run: uv run pytest tests/
+        run: make test
+
+      - name: 📦 Export requirements
+        run: make export

@@ -36,4 +36,4 @@ WORKDIR /app
 ENV PATH="/app/.venv/bin:$PATH"
 
 # Run command
-CMD ["make_me_laugh"]
+CMD ["numbeo-mcp"]

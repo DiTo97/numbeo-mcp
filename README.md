@@ -64,39 +64,139 @@ The MCP server expects the API key to be provided by the client through one of:
 
 The API key is not verified by the MCP server but is propagated to the Numbeo SDK, which uses it in API calls.
 
-## Available Tools
+**Authentication Flow:**
+```
+MCP Client → MCP Server → Numbeo SDK → Numbeo API
+  (Bearer)    (propagate)   (use in query params)
+```
+
+## Available MCP Tools
 
 ### Cost of Living Tools
 
-- **`get_city_cost_of_living`**: Get current prices for goods and services in a city
-- **`get_city_cost_of_living_archive`**: Get historical price data  
-- **`get_city_indices`**: Get cost of living, rent, and purchasing power indices
-- **`get_country_prices`**: Get average prices for an entire country
+#### `get_city_cost_of_living`
+Get current prices for goods and services in a city.
+
+**Parameters:**
+- `city` (string, required): Name of the city (e.g., "New York", "London")
+- `country` (string, optional): Country name for disambiguation
+
+**Example:**
+```json
+{
+  "city": "New York",
+  "country": "United States"
+}
+```
+
+#### `get_city_cost_of_living_archive`
+Get historical cost of living data for trend analysis.
+
+**Parameters:**
+- `city` (string, required): Name of the city
+- `country` (string, optional): Country name
+- `currency` (string, optional): Currency code (e.g., "USD", "EUR")
+
+#### `get_city_indices`
+Get composite indices including cost of living, rent, groceries, and purchasing power.
+
+**Parameters:**
+- `city` (string, required): Name of the city
+- `country` (string, optional): Country name
+
+#### `get_country_prices`
+Get average prices at the country level.
+
+**Parameters:**
+- `country` (string, required): Name of the country
 
 ### Quality of Life Tools
 
-- **`get_city_healthcare`**: Healthcare quality indices
-- **`get_city_traffic`**: Traffic and commute data
-- **`get_city_pollution`**: Environmental quality metrics
+#### `get_city_healthcare`
+Get healthcare quality and accessibility indices.
+
+**Parameters:**
+- `city` (string, required): Name of the city
+- `country` (string, optional): Country name
+
+#### `get_city_traffic`
+Get traffic conditions and commute time data.
+
+**Parameters:**
+- `city` (string, required): Name of the city
+- `country` (string, optional): Country name
+
+#### `get_city_pollution`
+Get air quality and environmental indices.
+
+**Parameters:**
+- `city` (string, required): Name of the city
+- `country` (string, optional): Country name
 
 ### Safety Tools
 
-- **`get_city_crime_statistics`**: Crime rates and safety indices
+#### `get_city_crime_statistics`
+Get crime rates and safety perception indices.
+
+**Parameters:**
+- `city` (string, required): Name of the city
+- `country` (string, optional): Country name
 
 ### Rankings Tools
 
-- **`get_city_rankings`**: Global city rankings by category
-- **`get_country_city_rankings`**: City rankings within a specific country
+#### `get_city_rankings`
+Get global city rankings for various categories.
+
+**Parameters:**
+- `section` (string, optional, default: "cost-of-living"): Category for rankings
+  - `"cost-of-living"`: Overall cost of living
+  - `"crime"`: Safety rankings
+  - `"health-care"`: Healthcare quality
+  - `"pollution"`: Environmental quality
+  - `"traffic"`: Traffic and commute
+  - `"quality-of-life"`: Overall quality of life
+
+#### `get_country_city_rankings`
+Get city rankings within a specific country.
+
+**Parameters:**
+- `country` (string, required): Name of the country
+- `section` (string, optional): Same options as `get_city_rankings`
 
 ## Vocabulary Resource
 
-The server provides a `vocabulary://numbeo-terms` resource that explains Numbeo API terminology:
-- `contributors12months`: Contributors in past 12 months
-- `monthLastUpdate`: Month of last update
-- `yearLastUpdate`: Year of last update
-- `contributors`: Total contributors (adaptive archive policy)
-- `cpi_factor`: Consumer Price Index calculation factor
-- `rent_factor`: Rent Index calculation factor
+The server provides a `vocabulary://numbeo-terms` resource that explains terminology used in Numbeo API responses:
+
+- **`contributors12months`**: The number of contributors who have submitted data in the past 12 months
+- **`monthLastUpdate`**: The month when the data was last updated
+- **`yearLastUpdate`**: The year of the last update
+- **`contributors`**: The total number of contributors whose data was used in the calculations (adaptive archive policy)
+- **`cpi_factor`**: A factor used to calculate our Consumer Price Index. Multiply this factor by the prices and add the result to the overall sum to compute the Cost of Living Index
+- **`rent_factor`**: A factor used to calculate our Rent Index. Multiply this factor by the prices and add the result to the overall sum to compute the Rent Index
+
+## Using with MCP Clients
+
+### Claude Desktop
+
+The MCP client should provide the API key through request metadata or authorization headers. Example configuration:
+
+```json
+{
+  "mcpServers": {
+    "numbeo": {
+      "command": "numbeo-mcp"
+    }
+  }
+}
+```
+
+Then pass the API key in tool calls via the client's authorization mechanism.
+
+### Other MCP Clients
+
+The server supports standard MCP protocol over stdio. API key should be passed through:
+- Request metadata (`api_key` field), or
+- Authorization header (`Authorization: Bearer <key>`)
 
 ## Using the SDK Directly
 
@@ -123,22 +223,34 @@ print(rankings)
 
 ## Development
 
+### Setup
+
+```bash
+uv sync --dev
+```
+
 ### Linting
 
 ```bash
-ruff check
+make linting
 ```
 
 ### Formatting
 
 ```bash
-ruff format
+make style
 ```
 
 ### Running Tests
 
 ```bash
-pytest tests/
+make test
+```
+
+### Export Requirements
+
+```bash
+make export
 ```
 
 ## Package Structure
@@ -148,11 +260,22 @@ src/
 ├── numbeo_sdk/          # Numbeo API SDK
 │   ├── __init__.py
 │   └── client.py        # HTTP client for Numbeo API
-└── numbeo_mcp_new/      # FastMCP server
+└── numbeo_mcp/          # FastMCP server
     ├── __init__.py
     ├── server.py        # MCP server with tools
     └── schemas.py       # Pydantic validation schemas
 ```
+
+## Validation
+
+The MCP server uses **strict input validation** with Pydantic schemas. All tool parameters are validated before being passed to the SDK:
+
+- **CityQueryParams**: city (required), country (optional)
+- **CityArchiveQueryParams**: city, country, currency (all validated)
+- **RankingsQueryParams**: section with enum validation
+- And more...
+
+Invalid inputs will be rejected with clear error messages.
 
 ## API Reference
 
@@ -163,6 +286,28 @@ Key features:
 - MCP server uses strict input validation with Pydantic
 - No authentication headers required (Bearer token from client → SDK)
 - Returns JSON data with comprehensive city/country statistics
+
+## API Rate Limits
+
+The Numbeo API may have rate limits depending on your subscription level. Refer to [Numbeo API documentation](https://www.numbeo.com/api/doc.jsp) for details.
+
+## Troubleshooting
+
+### "Numbeo API key is required" error
+
+The API key must be provided by the MCP client through authorization headers or request metadata, not environment variables. Check your MCP client configuration.
+
+### Connection timeout
+
+Check your internet connection and verify that the Numbeo API is accessible.
+
+### Invalid API response
+
+Ensure your API key is valid and your subscription is active.
+
+### Validation errors
+
+The server uses strict Pydantic validation. Make sure all required fields are provided and enum values are correct (e.g., section must be one of: "cost-of-living", "crime", "health-care", "pollution", "traffic", "quality-of-life").
 
 ## License
 
