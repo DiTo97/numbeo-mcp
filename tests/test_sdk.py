@@ -24,7 +24,7 @@ class TestNumbeoClient:
     @pytest.mark.asyncio
     async def test_client_timeout_set(self, mock_client_class):
         """Test that client is initialized with timeout."""
-        client = NumbeoClient(api_key="test-key")
+        _ = NumbeoClient(api_key="test-key")
         
         # Check that AsyncClient was called with timeout
         mock_client_class.assert_called_once_with(timeout=30.0)
