@@ -30,3 +30,6 @@ packages = ["src/numbeo_sdk", "src/numbeo_mcp"]
 [tool.ruff]
 # https://docs.astral.sh/ruff/configuration/
 target-version = "py312"
+
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"

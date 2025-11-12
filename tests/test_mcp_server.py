@@ -60,10 +60,10 @@ class TestMCPServerIntegration:
 
     def test_server_imports(self):
         """Test that all necessary modules can be imported."""
-        from numbeo_mcp import main, mcp
-        from numbeo_sdk import NumbeoClient
+        from numbeo_mcp import main, mcp as package_mcp
+        from numbeo_sdk import Numbeo
 
-        # Verify imports are successful
+        # Verify imports are successful without clobbering the module-level mcp
         assert main is not None
-        assert mcp is not None
-        assert NumbeoClient is not None
+        assert package_mcp is not None
+        assert Numbeo is not None

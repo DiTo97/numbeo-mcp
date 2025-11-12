@@ -1,9 +1,11 @@
 """FastMCP server for the Numbeo API with authentication and resources."""
 
+from __future__ import annotations
+
 from typing import Any
 
 from fastmcp import Context, FastMCP
-from numbeo_sdk import NumbeoClient
+from numbeo_sdk import Numbeo, modeling
 
 from .schemas import (
     CityArchiveQueryParams,
@@ -15,6 +17,16 @@ from .schemas import (
 
 # Initialize FastMCP server with strict validation
 mcp = FastMCP("Numbeo API", strict_input_validation=True)
+
+
+SECTION_CODES = {
+    "cost-of-living": 1,
+    "crime": 2,
+    "health-care": 3,
+    "pollution": 4,
+    "traffic": 5,
+    "quality-of-life": 6,
+}
 
 
 # Vocabulary resource
@@ -37,41 +49,41 @@ def get_vocabulary() -> str:
     return VOCABULARY_CONTENT
 
 
-def get_client(ctx: Context) -> NumbeoClient:
-    """Get Numbeo client with API key from context.
+def _resolve_api_key(ctx: Context) -> str:
+    """Extract the Numbeo API key from the request context."""
 
-    The API key should be provided by the client through the authorization context.
-    It will be propagated to the Numbeo SDK which uses it for API calls.
-
-    Args:
-        ctx: FastMCP context containing authorization metadata
-
-    Returns:
-        Initialized NumbeoClient
-
-    Raises:
-        ValueError: If API key is not provided in the context
-    """
-    # Get API key from context metadata
-    # The client should provide it via Bearer token or custom header
     api_key = ctx.request_context.meta.get("api_key")
-
     if not api_key:
-        # Try to get from authorization header
         auth_header = ctx.request_context.meta.get("authorization", "")
         if auth_header.startswith("Bearer "):
-            api_key = auth_header[7:]  # Remove "Bearer " prefix
+            api_key = auth_header[7:]
 
     if not api_key:
         raise ValueError(
             "Numbeo API key is required. Please provide it via 'api_key' in meta or 'Authorization: Bearer <key>' header."
         )
 
-    return NumbeoClient(api_key=api_key)
+    return api_key
+
+
+def _section_code(section: str) -> int:
+    try:
+        return SECTION_CODES[section]
+    except KeyError as exc:  # pragma: no cover - defensive branch
+        raise ValueError(f"Unsupported rankings section: {section}") from exc
+
+
+def get_client(ctx: Context) -> Numbeo:
+    """Instantiate a Numbeo SDK client using context metadata."""
+
+    key = _resolve_api_key(ctx)
+    return Numbeo(key=key)
 
 
 @mcp.tool()
-def get_city_cost_of_living(params: CityQueryParams, ctx: Context) -> dict[str, Any]:
+async def get_city_cost_of_living(
+    params: CityQueryParams, ctx: Context
+) -> dict[str, Any]:
     """Get cost of living prices for a specific city.
 
     This tool retrieves current prices for various goods and services in a city,
@@ -84,12 +96,14 @@ def get_city_cost_of_living(params: CityQueryParams, ctx: Context) -> dict[str, 
     Returns:
         Dictionary containing price data for various items and services in the city
     """
-    client = get_client(ctx)
-    return client.get_city_prices(params.city, params.country)
+    request = modeling.GetCityPricesRequest(city=params.city, country=params.country)
+    async with get_client(ctx) as client:
+        response = await client.get_city_prices(request)
+    return response.model_dump(by_alias=True)
 
 
 @mcp.tool()
-def get_city_cost_of_living_archive(
+async def get_city_cost_of_living_archive(
     params: CityArchiveQueryParams, ctx: Context
 ) -> dict[str, Any]:
     """Get historical cost of living data for a city.
@@ -103,12 +117,18 @@ def get_city_cost_of_living_archive(
     Returns:
         Dictionary with historical price data
     """
-    client = get_client(ctx)
-    return client.get_city_prices_archive(params.city, params.country, params.currency)
+    request = modeling.GetHistoricalCityPricesRequest(
+        city=params.city,
+        country=params.country,
+        currency=params.currency,
+    )
+    async with get_client(ctx) as client:
+        response = await client.get_historical_city_prices(request)
+    return response.model_dump(by_alias=True)
 
 
 @mcp.tool()
-def get_city_indices(params: CityQueryParams, ctx: Context) -> dict[str, Any]:
+async def get_city_indices(params: CityQueryParams, ctx: Context) -> dict[str, Any]:
     """Get various quality of life indices for a city.
 
     Provides composite indices including cost of living index, rent index,
@@ -121,12 +141,16 @@ def get_city_indices(params: CityQueryParams, ctx: Context) -> dict[str, Any]:
     Returns:
         Dictionary with various city indices
     """
-    client = get_client(ctx)
-    return client.get_indices(params.city, params.country)
+    request = modeling.GetIndicesRequest(city=params.city, country=params.country)
+    async with get_client(ctx) as client:
+        response = await client.get_indices(request)
+    return response.model_dump(by_alias=True)
 
 
 @mcp.tool()
-def get_city_crime_statistics(params: CityQueryParams, ctx: Context) -> dict[str, Any]:
+async def get_city_crime_statistics(
+    params: CityQueryParams, ctx: Context
+) -> dict[str, Any]:
     """Get crime statistics and safety indices for a city.
 
     Provides information about crime levels and safety perceptions in the city.
@@ -138,12 +162,14 @@ def get_city_crime_statistics(params: CityQueryParams, ctx: Context) -> dict[str
     Returns:
         Dictionary with crime statistics and safety indices
     """
-    client = get_client(ctx)
-    return client.get_city_crime(params.city, params.country)
+    request = modeling.GetCityCrimeRequest(city=params.city, country=params.country)
+    async with get_client(ctx) as client:
+        response = await client.get_city_crime(request)
+    return response.model_dump(by_alias=True)
 
 
 @mcp.tool()
-def get_city_healthcare(params: CityQueryParams, ctx: Context) -> dict[str, Any]:
+async def get_city_healthcare(params: CityQueryParams, ctx: Context) -> dict[str, Any]:
     """Get healthcare quality indices for a city.
 
     Provides information about healthcare system quality, accessibility,
@@ -156,12 +182,17 @@ def get_city_healthcare(params: CityQueryParams, ctx: Context) -> dict[str, Any]
     Returns:
         Dictionary with healthcare quality indices
     """
-    client = get_client(ctx)
-    return client.get_city_healthcare(params.city, params.country)
+    request = modeling.GetCityHealthcareRequest(
+        city=params.city,
+        country=params.country,
+    )
+    async with get_client(ctx) as client:
+        response = await client.get_city_healthcare(request)
+    return response.model_dump(by_alias=True)
 
 
 @mcp.tool()
-def get_city_traffic(params: CityQueryParams, ctx: Context) -> dict[str, Any]:
+async def get_city_traffic(params: CityQueryParams, ctx: Context) -> dict[str, Any]:
     """Get traffic and commute information for a city.
 
     Provides data about traffic conditions, commute times, and transportation efficiency.
@@ -173,12 +204,14 @@ def get_city_traffic(params: CityQueryParams, ctx: Context) -> dict[str, Any]:
     Returns:
         Dictionary with traffic and commute data
     """
-    client = get_client(ctx)
-    return client.get_city_traffic(params.city, params.country)
+    request = modeling.GetCityTrafficRequest(city=params.city, country=params.country)
+    async with get_client(ctx) as client:
+        response = await client.get_city_traffic(request)
+    return response.model_dump(by_alias=True)
 
 
 @mcp.tool()
-def get_city_pollution(params: CityQueryParams, ctx: Context) -> dict[str, Any]:
+async def get_city_pollution(params: CityQueryParams, ctx: Context) -> dict[str, Any]:
     """Get pollution and environmental quality data for a city.
 
     Provides information about air quality, pollution levels, and environmental indices.
@@ -190,12 +223,19 @@ def get_city_pollution(params: CityQueryParams, ctx: Context) -> dict[str, Any]:
     Returns:
         Dictionary with pollution and environmental data
     """
-    client = get_client(ctx)
-    return client.get_city_pollution(params.city, params.country)
+    request = modeling.GetCityPollutionRequest(
+        city=params.city,
+        country=params.country,
+    )
+    async with get_client(ctx) as client:
+        response = await client.get_city_pollution(request)
+    return response.model_dump(by_alias=True)
 
 
 @mcp.tool()
-def get_country_prices(params: CountryQueryParams, ctx: Context) -> dict[str, Any]:
+async def get_country_prices(
+    params: CountryQueryParams, ctx: Context
+) -> dict[str, Any]:
     """Get average cost of living prices for an entire country.
 
     Provides country-level aggregated price data.
@@ -207,12 +247,16 @@ def get_country_prices(params: CountryQueryParams, ctx: Context) -> dict[str, An
     Returns:
         Dictionary with country-level price data
     """
-    client = get_client(ctx)
-    return client.get_country_prices(params.country)
+    request = modeling.GetCountryPricesRequest(country=params.country)
+    async with get_client(ctx) as client:
+        response = await client.get_country_prices(request)
+    return response.model_dump(by_alias=True)
 
 
 @mcp.tool()
-def get_city_rankings(params: RankingsQueryParams, ctx: Context) -> dict[str, Any]:
+async def get_city_rankings(
+    params: RankingsQueryParams, ctx: Context
+) -> list[dict[str, Any]]:
     """Get global city rankings for various categories.
 
     Provides rankings of cities worldwide based on different metrics.
@@ -222,16 +266,19 @@ def get_city_rankings(params: RankingsQueryParams, ctx: Context) -> dict[str, An
         ctx: Request context containing API key
 
     Returns:
-        Dictionary with city rankings for the specified category
+        List of city ranking entries for the specified category
     """
-    client = get_client(ctx)
-    return client.get_rankings(params.section)
+    section = _section_code(params.section)
+    request = modeling.GetRankingsByCityCurrentRequest(section=section)
+    async with get_client(ctx) as client:
+        response = await client.get_rankings_by_city_current(request)
+    return [entry.model_dump(by_alias=True) for entry in response.root]
 
 
 @mcp.tool()
-def get_country_city_rankings(
+async def get_country_city_rankings(
     params: CountryRankingsQueryParams, ctx: Context
-) -> dict[str, Any]:
+) -> list[dict[str, Any]]:
     """Get city rankings within a specific country.
 
     Provides rankings of cities within a country based on different metrics.
@@ -241,14 +288,23 @@ def get_country_city_rankings(
         ctx: Request context containing API key
 
     Returns:
-        Dictionary with city rankings within the specified country
+        List of ranking entries filtered to the specified country
     """
-    client = get_client(ctx)
-    return client.get_rankings_by_country(params.country, params.section)
+    section = _section_code(params.section)
+    request = modeling.GetRankingsByCityCurrentRequest(section=section)
+    async with get_client(ctx) as client:
+        rankings = await client.get_rankings_by_city_current(request)
+
+    return [
+        entry.model_dump(by_alias=True)
+        for entry in rankings.root
+        if entry.country == params.country
+    ]
 
 
-def main():
+def main() -> None:
     """Run the Numbeo MCP server."""
+
     mcp.run()
 
 
