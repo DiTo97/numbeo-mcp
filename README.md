@@ -1,6 +1,6 @@
 # Numbeo API MCP Server 🌍
 
-FastMCP server wrapping the [Numbeo API](https://www.numbeo.com/api/doc.jsp), providing data on cost of living, property prices, and crime rates worldwide.
+FastMCP server wrapping the [Numbeo API](https://www.numbeo.com/api/doc.jsp), providing data on cost of living, property prices, and crime rates.
 
 ## Architecture
 
