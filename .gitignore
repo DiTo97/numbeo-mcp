@@ -1,32 +1,28 @@
-# Ruff
-.ruff_cache
-
-# Byte-compiled / optimized / DLL files
-__pycache__/
+# byte-compiled / optimized / DLL files
+__pycache__
 *.py[cod]
 *$py.class
 
-# Distribution / packaging
+# distribution / packaging
 .Python
-build/
-dist/
-*.egg-info/
+build
+dist
+*.egg-info
 *.egg
 
-# Unit test / coverage reports
-.coverage
-.pytest_cache/
-
-# Environments
+# environments
 .env
 .venv
-env/
-venv/
 
-# Type checkers
-.mypy_cache/
-.pytype/
+# test / coverage reports
+.coverage
+.pytest_cache
+
+# type checking
+.mypy_cache
+.pytype
+.ruff_cache
 
 # IDEs
-.idea/
-.vscode/
+.idea
+.vscode

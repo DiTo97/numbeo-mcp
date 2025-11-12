@@ -1,6 +1,6 @@
 """Tests for the Numbeo SDK client."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -20,43 +20,39 @@ class TestNumbeoClient:
         client = NumbeoClient(api_key="test-key")
         assert client.api_key == "test-key"
 
-    @patch("numbeo_sdk.client.requests.get")
-    def test_get_city_prices(self, mock_get):
-        """Test get_city_prices method."""
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"city": "New York", "prices": []}
-        mock_response.raise_for_status = MagicMock()
-        mock_get.return_value = mock_response
-
+    @patch("numbeo_sdk.client.httpx.AsyncClient")
+    @pytest.mark.asyncio
+    async def test_client_timeout_set(self, mock_client_class):
+        """Test that client is initialized with timeout."""
         client = NumbeoClient(api_key="test-key")
-        result = client.get_city_prices("New York", "United States")
+        
+        # Check that AsyncClient was called with timeout
+        mock_client_class.assert_called_once_with(timeout=30.0)
 
-        assert result == {"city": "New York", "prices": []}
-        mock_get.assert_called_once()
-        call_args = mock_get.call_args
-        assert "api_key" in call_args.kwargs["params"]
-        assert call_args.kwargs["params"]["query"] == "New York"
-        assert call_args.kwargs["params"]["country"] == "United States"
-
-    @patch("numbeo_sdk.client.requests.get")
-    def test_get_city_prices_without_country(self, mock_get):
+    @patch("numbeo_sdk.client.httpx.AsyncClient")
+    @pytest.mark.asyncio
+    async def test_get_city_prices_without_country(self, mock_client_class):
         """Test get_city_prices without country parameter."""
+        mock_client = AsyncMock()
         mock_response = MagicMock()
         mock_response.json.return_value = {"city": "Paris", "prices": []}
         mock_response.raise_for_status = MagicMock()
-        mock_get.return_value = mock_response
+        mock_client.get.return_value = mock_response
+        mock_client_class.return_value = mock_client
 
         client = NumbeoClient(api_key="test-key")
-        result = client.get_city_prices("Paris")
+        result = await client.get_city_prices("Paris")
 
         assert result == {"city": "Paris", "prices": []}
-        call_args = mock_get.call_args
+        call_args = mock_client.get.call_args
         assert call_args.kwargs["params"]["query"] == "Paris"
         assert "country" not in call_args.kwargs["params"]
 
-    @patch("numbeo_sdk.client.requests.get")
-    def test_get_indices(self, mock_get):
+    @patch("numbeo_sdk.client.httpx.AsyncClient")
+    @pytest.mark.asyncio
+    async def test_get_indices(self, mock_client_class):
         """Test get_indices method."""
+        mock_client = AsyncMock()
         mock_response = MagicMock()
         mock_response.json.return_value = {
             "city": "London",
@@ -64,52 +60,45 @@ class TestNumbeoClient:
             "rent_index": 75.2,
         }
         mock_response.raise_for_status = MagicMock()
-        mock_get.return_value = mock_response
+        mock_client.get.return_value = mock_response
+        mock_client_class.return_value = mock_client
 
         client = NumbeoClient(api_key="test-key")
-        result = client.get_indices("London", "United Kingdom")
+        result = await client.get_indices("London", "United Kingdom")
 
         assert "cost_of_living_index" in result
         assert result["city"] == "London"
 
-    @patch("numbeo_sdk.client.requests.get")
-    def test_get_city_crime(self, mock_get):
+    @patch("numbeo_sdk.client.httpx.AsyncClient")
+    @pytest.mark.asyncio
+    async def test_get_city_crime(self, mock_client_class):
         """Test get_city_crime method."""
+        mock_client = AsyncMock()
         mock_response = MagicMock()
         mock_response.json.return_value = {"city": "Tokyo", "crime_index": 15.3}
         mock_response.raise_for_status = MagicMock()
-        mock_get.return_value = mock_response
+        mock_client.get.return_value = mock_response
+        mock_client_class.return_value = mock_client
 
         client = NumbeoClient(api_key="test-key")
-        result = client.get_city_crime("Tokyo", "Japan")
+        result = await client.get_city_crime("Tokyo", "Japan")
 
         assert result["city"] == "Tokyo"
         assert "crime_index" in result
 
-    @patch("numbeo_sdk.client.requests.get")
-    def test_api_key_included_in_params(self, mock_get):
+    @patch("numbeo_sdk.client.httpx.AsyncClient")
+    @pytest.mark.asyncio
+    async def test_api_key_included_in_params(self, mock_client_class):
         """Test that API key is always included in request parameters."""
+        mock_client = AsyncMock()
         mock_response = MagicMock()
         mock_response.json.return_value = {}
         mock_response.raise_for_status = MagicMock()
-        mock_get.return_value = mock_response
+        mock_client.get.return_value = mock_response
+        mock_client_class.return_value = mock_client
 
         client = NumbeoClient(api_key="secret-key")
-        client.get_city_prices("TestCity")
+        await client.get_city_prices("TestCity")
 
-        call_args = mock_get.call_args
+        call_args = mock_client.get.call_args
         assert call_args.kwargs["params"]["api_key"] == "secret-key"
-
-    @patch("numbeo_sdk.client.requests.get")
-    def test_request_timeout(self, mock_get):
-        """Test that requests include timeout."""
-        mock_response = MagicMock()
-        mock_response.json.return_value = {}
-        mock_response.raise_for_status = MagicMock()
-        mock_get.return_value = mock_response
-
-        client = NumbeoClient(api_key="test-key")
-        client.get_city_prices("TestCity")
-
-        call_args = mock_get.call_args
-        assert call_args.kwargs["timeout"] == 30

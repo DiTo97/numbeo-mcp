@@ -203,22 +203,25 @@ The server supports standard MCP protocol over stdio. API key should be passed t
 You can also use the Numbeo SDK directly in your Python code:
 
 ```python
+import asyncio
 from numbeo_sdk import NumbeoClient
 
-# Initialize client with API key
-client = NumbeoClient(api_key="your-api-key")
+async def main():
+    # Initialize client with API key
+    async with NumbeoClient(api_key="your-api-key") as client:
+        # Get cost of living data
+        data = await client.get_city_prices("London", "United Kingdom")
+        print(data)
 
-# Get cost of living data
-data = client.get_city_prices("London", "United Kingdom")
-print(data)
+        # Get crime statistics
+        crime = await client.get_city_crime("Tokyo", "Japan")
+        print(crime)
 
-# Get crime statistics
-crime = client.get_city_crime("Tokyo", "Japan")
-print(crime)
+        # Get rankings
+        rankings = await client.get_rankings("cost-of-living")
+        print(rankings)
 
-# Get rankings
-rankings = client.get_rankings("cost-of-living")
-print(rankings)
+asyncio.run(main())
 ```
 
 ## Development
@@ -226,7 +229,7 @@ print(rankings)
 ### Setup
 
 ```bash
-uv sync --dev
+make sync
 ```
 
 ### Linting

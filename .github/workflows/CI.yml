@@ -1,34 +1,34 @@
-name: Testing
+name: CI
 on:
   pull_request:
     branches: [main]
 
 jobs:
-  lint-and-test:
+  linting-and-test:
     runs-on: ubuntu-latest
     permissions:
       contents: read
 
     steps:
-      - name: 🛎️ Checkout
+      - name: 🛎️ checkout
         uses: actions/checkout@v4
 
-      - name: 📦 Install uv
+      - name: 📦 uv
         uses: astral-sh/setup-uv@v4
 
-      - name: 🐍 Set up Python
+      - name: 🐍 set up venv
         uses: actions/setup-python@v5
         with:
           python-version-file: ".python-version"
 
-      - name: 🦾 Install the project
-        run: uv sync --dev
+      - name: 🦾 sync
+        run: make sync
 
-      - name: 💅 Linting
+      - name: 💅 linting
         run: make linting
 
-      - name: 🧪 Test
+      - name: 🧪 test
         run: make test
 
-      - name: 📦 Export requirements
+      - name: 📦 requirements
         run: make export
