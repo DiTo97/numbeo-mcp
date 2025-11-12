@@ -26,7 +26,7 @@ class Numbeo:
         self.key = key
         self._client = httpx.AsyncClient(timeout=timeout)
 
-    async def __aenter__(self) -> Numbeo:
+    async def __aenter__(self) -> "Numbeo":
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
