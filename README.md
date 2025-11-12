@@ -204,22 +204,26 @@ You can also use the Numbeo SDK directly in your Python code:
 
 ```python
 import asyncio
-from numbeo_sdk import NumbeoClient
+from numbeo_sdk import Numbeo, modeling
 
-async def main():
-    # Initialize client with API key
-    async with NumbeoClient(api_key="your-api-key") as client:
-        # Get cost of living data
-        data = await client.get_city_prices("London", "United Kingdom")
-        print(data)
 
-        # Get crime statistics
-        crime = await client.get_city_crime("Tokyo", "Japan")
-        print(crime)
+async def main() -> None:
+  async with Numbeo(key="your-api-key") as client:
+    prices = await client.get_city_prices(
+      modeling.GetCityPricesRequest(city="London", country="United Kingdom")
+    )
+    print(prices.model_dump(by_alias=True))
 
-        # Get rankings
-        rankings = await client.get_rankings("cost-of-living")
-        print(rankings)
+    crime = await client.get_city_crime(
+      modeling.GetCityCrimeRequest(city="Tokyo", country="Japan")
+    )
+    print(crime.model_dump(by_alias=True))
+
+    rankings = await client.get_rankings_by_city_current(
+      modeling.GetRankingsByCityCurrentRequest(section=1)
+    )
+    print([entry.model_dump(by_alias=True) for entry in rankings.root])
+
 
 asyncio.run(main())
 ```

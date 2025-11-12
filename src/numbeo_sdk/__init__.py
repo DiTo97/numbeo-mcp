@@ -6,6 +6,7 @@ which offers data on cost of living, property prices, and crime rates worldwide.
 
 __version__ = "0.1.0"
 
-from .client import NumbeoClient
+from .client import Numbeo
+from . import modeling
 
-__all__ = ["NumbeoClient"]
+__all__ = ["Numbeo", "modeling"]
