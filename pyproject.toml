@@ -1,14 +1,24 @@
 [project]
 # https://docs.astral.sh/uv/concepts/projects/config/
-name = "numbeo-api-mcp-server"
+name = "numbeo-mcp"
 version = "0.1.0"
-description = "FastMCP server wrapping the Numbeo API for cost of living, property prices and crime rates data"
+description = "FastMCP server wrapping the Numbeo API, providing data on cost of living, property prices, and crime rates."
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = ["requests>=2.32.3", "fastmcp>=2.13.0", "pydantic>=2.0.0"]
+authors = [
+  { name = "Federico Minutoli", email = "fede97.minutoli@gmail.com" }
+]
+dependencies = [
+  "fastmcp>2,<3",
+  "pydantic>2,<3"
+]
 
 [dependency-groups]
-dev = ["pytest>=8.3.4", "ruff>=0.8.4"]
+dev = [
+  "pytest<9",
+  "pytest-asyncio<2",
+  "ruff<1"
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -20,8 +30,3 @@ packages = ["src/numbeo_sdk", "src/numbeo_mcp"]
 [tool.ruff]
 # https://docs.astral.sh/ruff/configuration/
 target-version = "py312"
-
-
-[project.scripts]
-# Start the Numbeo MCP server
-numbeo-mcp = "numbeo_mcp:main"

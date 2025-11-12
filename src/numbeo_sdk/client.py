@@ -2,7 +2,7 @@
 
 from typing import Any, Optional
 
-import requests
+import httpx
 
 
 class NumbeoClient:
@@ -26,8 +26,21 @@ class NumbeoClient:
         if not api_key:
             raise ValueError("Numbeo API key is required.")
         self.api_key = api_key
+        self._client = httpx.AsyncClient(timeout=30.0)
 
-    def _make_request(
+    async def __aenter__(self):
+        """Async context manager entry."""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit."""
+        await self._client.aclose()
+
+    async def close(self):
+        """Close the HTTP client."""
+        await self._client.aclose()
+
+    async def _make_request(
         self, endpoint: str, params: Optional[dict[str, Any]] = None
     ) -> dict[str, Any]:
         """Make a request to the Numbeo API.
@@ -40,7 +53,7 @@ class NumbeoClient:
             JSON response from the API
 
         Raises:
-            requests.HTTPError: If the API request fails
+            httpx.HTTPError: If the API request fails
         """
         if params is None:
             params = {}
@@ -49,12 +62,12 @@ class NumbeoClient:
         params["api_key"] = self.api_key
 
         url = f"{self.BASE_URL}/{endpoint}"
-        response = requests.get(url, params=params, timeout=30)
+        response = await self._client.get(url, params=params)
         response.raise_for_status()
 
         return response.json()
 
-    def get_city_prices(
+    async def get_city_prices(
         self, city: str, country: Optional[str] = None
     ) -> dict[str, Any]:
         """Get cost of living prices for a specific city.
@@ -70,9 +83,9 @@ class NumbeoClient:
         if country:
             params["country"] = country
 
-        return self._make_request("city_prices", params)
+        return await self._make_request("city_prices", params)
 
-    def get_city_prices_archive(
+    async def get_city_prices_archive(
         self, city: str, country: Optional[str] = None, currency: Optional[str] = None
     ) -> dict[str, Any]:
         """Get historical cost of living data for a city.
@@ -91,9 +104,9 @@ class NumbeoClient:
         if currency:
             params["currency"] = currency
 
-        return self._make_request("city_prices_archive", params)
+        return await self._make_request("city_prices_archive", params)
 
-    def get_indices(self, city: str, country: Optional[str] = None) -> dict[str, Any]:
+    async def get_indices(self, city: str, country: Optional[str] = None) -> dict[str, Any]:
         """Get various indices for a city (cost of living, rent, etc.).
 
         Args:
@@ -107,9 +120,9 @@ class NumbeoClient:
         if country:
             params["country"] = country
 
-        return self._make_request("indices", params)
+        return await self._make_request("indices", params)
 
-    def get_city_healthcare(
+    async def get_city_healthcare(
         self, city: str, country: Optional[str] = None
     ) -> dict[str, Any]:
         """Get healthcare quality indices for a city.
@@ -125,9 +138,9 @@ class NumbeoClient:
         if country:
             params["country"] = country
 
-        return self._make_request("city_healthcare", params)
+        return await self._make_request("city_healthcare", params)
 
-    def get_city_traffic(
+    async def get_city_traffic(
         self, city: str, country: Optional[str] = None
     ) -> dict[str, Any]:
         """Get traffic and commute data for a city.
@@ -143,9 +156,9 @@ class NumbeoClient:
         if country:
             params["country"] = country
 
-        return self._make_request("city_traffic", params)
+        return await self._make_request("city_traffic", params)
 
-    def get_city_pollution(
+    async def get_city_pollution(
         self, city: str, country: Optional[str] = None
     ) -> dict[str, Any]:
         """Get pollution indices for a city.
@@ -161,9 +174,9 @@ class NumbeoClient:
         if country:
             params["country"] = country
 
-        return self._make_request("city_pollution", params)
+        return await self._make_request("city_pollution", params)
 
-    def get_city_crime(
+    async def get_city_crime(
         self, city: str, country: Optional[str] = None
     ) -> dict[str, Any]:
         """Get crime statistics for a city.
@@ -179,9 +192,9 @@ class NumbeoClient:
         if country:
             params["country"] = country
 
-        return self._make_request("city_crime", params)
+        return await self._make_request("city_crime", params)
 
-    def get_country_prices(self, country: str) -> dict[str, Any]:
+    async def get_country_prices(self, country: str) -> dict[str, Any]:
         """Get average prices for a country.
 
         Args:
@@ -191,9 +204,9 @@ class NumbeoClient:
             Dictionary with country-level price data
         """
         params = {"country": country}
-        return self._make_request("country_prices", params)
+        return await self._make_request("country_prices", params)
 
-    def get_rankings(self, section: str = "cost-of-living") -> dict[str, Any]:
+    async def get_rankings(self, section: str = "cost-of-living") -> dict[str, Any]:
         """Get city rankings for various categories.
 
         Args:
@@ -203,9 +216,9 @@ class NumbeoClient:
             Dictionary with rankings data
         """
         params = {"section": section}
-        return self._make_request("rankings", params)
+        return await self._make_request("rankings", params)
 
-    def get_rankings_by_country(
+    async def get_rankings_by_country(
         self, country: str, section: str = "cost-of-living"
     ) -> dict[str, Any]:
         """Get city rankings within a specific country.
@@ -218,4 +231,4 @@ class NumbeoClient:
             Dictionary with country-specific rankings
         """
         params = {"country": country, "section": section}
-        return self._make_request("rankings_by_country", params)
+        return await self._make_request("rankings_by_country", params)
