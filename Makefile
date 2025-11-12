@@ -1,14 +1,14 @@
 .PHONY: style linting test lock sync export
 
 export PYTHONPATH = .
-check_dirs := src tests
+sources := src tests
 
 style:
-	uv run ruff format $(check_dirs)
-	uv run ruff check --select I --fix $(check_dirs)
+	uv run ruff format $(sources)
+	uv run ruff check --select I --fix $(sources)
 
 linting:
-	uv run ruff check $(check_dirs)
+	uv run ruff check $(sources)
 
 test:
 	uv run pytest tests/
@@ -17,7 +17,7 @@ lock:
 	uv lock
 
 sync:
-	uv sync --no-dev
+	uv sync --dev
 
 export:
 	uv export --no-dev --format requirements-txt --output-file requirements.txt
