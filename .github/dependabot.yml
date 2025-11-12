@@ -4,8 +4,6 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    labels:
-      - "CI"
     pull-request-branch-name:
       separator: "/"
     open-pull-requests-limit: 5
