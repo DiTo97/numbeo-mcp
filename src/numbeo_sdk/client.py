@@ -1,47 +1,43 @@
-"""Numbeo API client for fetching cost of living, property prices, and crime data."""
+"""Asynchronous Numbeo API client."""
 
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 
+from . import modeling
 
-class NumbeoClient:
-    """Client for interacting with the Numbeo API.
 
-    This client handles all HTTP communication with the Numbeo API endpoints.
-    The API key is required and should be passed during initialization.
-    """
+class Numbeo:
+    """Client for interacting with the Numbeo HTTP API."""
 
-    BASE_URL = "https://www.numbeo.com/api"
+    URL = "https://www.numbeo.com/api"
 
-    def __init__(self, api_key: str):
+    def __init__(self, key: str, *, timeout: float = 30.0):
         """Initialize the Numbeo API client.
 
         Args:
-            api_key: Numbeo API key for authentication.
+            key: Numbeo API key for authentication.
 
         Raises:
-            ValueError: If api_key is not provided.
+            ValueError: If key is not provided.
         """
-        if not api_key:
+        if not key:
             raise ValueError("Numbeo API key is required.")
-        self.api_key = api_key
-        self._client = httpx.AsyncClient(timeout=30.0)
+        self.key = key
+        self._client = httpx.AsyncClient(timeout=timeout)
 
-    async def __aenter__(self):
-        """Async context manager entry."""
+    async def __aenter__(self) -> "Numbeo":
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit."""
-        await self._client.aclose()
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        await self.close()
 
-    async def close(self):
-        """Close the HTTP client."""
+    async def close(self) -> None:
+        """Close the underlying HTTP client if owned by this instance."""
         await self._client.aclose()
 
     async def _make_request(
-        self, endpoint: str, params: Optional[dict[str, Any]] = None
+        self, endpoint: str, params: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """Make a request to the Numbeo API.
 
@@ -59,176 +55,195 @@ class NumbeoClient:
             params = {}
 
         # Add API key to query parameters
-        params["api_key"] = self.api_key
+        params["api_key"] = self.key
 
-        url = f"{self.BASE_URL}/{endpoint}"
-        response = await self._client.get(url, params=params)
+        response = await self._client.get(f"{self.URL}/{endpoint}", params=params)
         response.raise_for_status()
-
         return response.json()
 
+    def _prepare_params(self, request: modeling.RequestModel | None) -> dict[str, Any]:
+        if request is None:
+            return {}
+        return request.model_dump(by_alias=True, exclude_none=True)
+
+    async def get_cities(
+        self, request: modeling.GetCitiesRequest | None = None
+    ) -> modeling.GetCitiesResponse:
+        params = self._prepare_params(request)
+        data = await self._make_request("cities", params)
+        return modeling.GetCitiesResponse.model_validate(data)
+
+    async def get_items(
+        self, request: modeling.GetItemsRequest | None = None
+    ) -> modeling.GetItemsResponse:
+        params = self._prepare_params(request)
+        data = await self._make_request("items", params)
+        return modeling.GetItemsResponse.model_validate(data)
+
+    async def get_currency_exchange_rates(
+        self, request: modeling.GetCurrencyExchangeRatesRequest | None = None
+    ) -> modeling.GetCurrencyExchangeRatesResponse:
+        params = self._prepare_params(request)
+        data = await self._make_request("currency_exchange_rates", params)
+        return modeling.GetCurrencyExchangeRatesResponse.model_validate(data)
+
     async def get_city_prices(
-        self, city: str, country: Optional[str] = None
-    ) -> dict[str, Any]:
-        """Get cost of living prices for a specific city.
+        self, request: modeling.GetCityPricesRequest
+    ) -> modeling.GetCityPricesResponse:
+        params = self._prepare_params(request)
+        data = await self._make_request("city_prices", params)
+        return modeling.GetCityPricesResponse.model_validate(data)
 
-        Args:
-            city: City name
-            country: Optional country name for disambiguation
+    async def get_country_prices(
+        self, request: modeling.GetCountryPricesRequest
+    ) -> modeling.GetCountryPricesResponse:
+        params = self._prepare_params(request)
+        data = await self._make_request("country_prices", params)
+        return modeling.GetCountryPricesResponse.model_validate(data)
 
-        Returns:
-            Dictionary with price data for the city
-        """
-        params = {"query": city}
-        if country:
-            params["country"] = country
+    async def get_city_cost_estimator(
+        self, request: modeling.GetCityCostEstimatorRequest
+    ) -> modeling.GetCityCostEstimatorResponse:
+        params = self._prepare_params(request)
+        data = await self._make_request("city_cost_estimator", params)
+        return modeling.GetCityCostEstimatorResponse.model_validate(data)
 
-        return await self._make_request("city_prices", params)
+    async def get_close_cities_with_prices(
+        self, request: modeling.GetCloseCitiesWithPricesRequest
+    ) -> modeling.GetCloseCitiesWithPricesResponse:
+        params = self._prepare_params(request)
+        data = await self._make_request("close_cities_with_prices", params)
+        return modeling.GetCloseCitiesWithPricesResponse.model_validate(data)
 
-    async def get_city_prices_archive(
-        self, city: str, country: Optional[str] = None, currency: Optional[str] = None
-    ) -> dict[str, Any]:
-        """Get historical cost of living data for a city.
+    async def get_country_administrative_units(
+        self, request: modeling.GetCountryAdministrativeUnitsRequest
+    ) -> modeling.GetCountryAdministrativeUnitsResponse:
+        params = self._prepare_params(request)
+        data = await self._make_request("country_administrative_units", params)
+        return modeling.GetCountryAdministrativeUnitsResponse.model_validate(data)
 
-        Args:
-            city: City name
-            country: Optional country name
-            currency: Optional currency code (e.g., USD, EUR)
+    async def get_administrative_unit_prices(
+        self, request: modeling.GetAdministrativeUnitPricesRequest
+    ) -> modeling.GetAdministrativeUnitPricesResponse:
+        params = self._prepare_params(request)
+        data = await self._make_request("administrative_unit_prices", params)
+        return modeling.GetAdministrativeUnitPricesResponse.model_validate(data)
 
-        Returns:
-            Dictionary with historical price data
-        """
-        params = {"query": city}
-        if country:
-            params["country"] = country
-        if currency:
-            params["currency"] = currency
+    async def get_historical_city_prices(
+        self, request: modeling.GetHistoricalCityPricesRequest
+    ) -> modeling.GetHistoricalCityPricesResponse:
+        params = self._prepare_params(request)
+        data = await self._make_request("historical_city_prices", params)
+        return modeling.GetHistoricalCityPricesResponse.model_validate(data)
 
-        return await self._make_request("city_prices_archive", params)
+    async def get_historical_country_prices(
+        self, request: modeling.GetHistoricalCountryPricesRequest
+    ) -> modeling.GetHistoricalCountryPricesResponse:
+        params = self._prepare_params(request)
+        data = await self._make_request("historical_country_prices", params)
+        return modeling.GetHistoricalCountryPricesResponse.model_validate(data)
 
-    async def get_indices(self, city: str, country: Optional[str] = None) -> dict[str, Any]:
-        """Get various indices for a city (cost of living, rent, etc.).
+    async def get_historical_country_prices_monthly(
+        self, request: modeling.GetHistoricalCountryPricesMonthlyRequest
+    ) -> modeling.GetHistoricalCountryPricesMonthlyResponse:
+        params = self._prepare_params(request)
+        data = await self._make_request("historical_country_prices_monthly", params)
+        return modeling.GetHistoricalCountryPricesMonthlyResponse.model_validate(data)
 
-        Args:
-            city: City name
-            country: Optional country name
+    async def get_historical_currency_exchange_rates(
+        self, request: modeling.GetHistoricalCurrencyExchangeRatesRequest
+    ) -> modeling.GetHistoricalCurrencyExchangeRatesResponse:
+        params = self._prepare_params(request)
+        data = await self._make_request("historical_currency_exchange_rates", params)
+        return modeling.GetHistoricalCurrencyExchangeRatesResponse.model_validate(data)
 
-        Returns:
-            Dictionary with various city indices
-        """
-        params = {"query": city}
-        if country:
-            params["country"] = country
+    async def get_indices(
+        self, request: modeling.GetIndicesRequest
+    ) -> modeling.GetIndicesResponse:
+        params = self._prepare_params(request)
+        data = await self._make_request("indices", params)
+        return modeling.GetIndicesResponse.model_validate(data)
 
-        return await self._make_request("indices", params)
-
-    async def get_city_healthcare(
-        self, city: str, country: Optional[str] = None
-    ) -> dict[str, Any]:
-        """Get healthcare quality indices for a city.
-
-        Args:
-            city: City name
-            country: Optional country name
-
-        Returns:
-            Dictionary with healthcare indices
-        """
-        params = {"query": city}
-        if country:
-            params["country"] = country
-
-        return await self._make_request("city_healthcare", params)
-
-    async def get_city_traffic(
-        self, city: str, country: Optional[str] = None
-    ) -> dict[str, Any]:
-        """Get traffic and commute data for a city.
-
-        Args:
-            city: City name
-            country: Optional country name
-
-        Returns:
-            Dictionary with traffic indices
-        """
-        params = {"query": city}
-        if country:
-            params["country"] = country
-
-        return await self._make_request("city_traffic", params)
-
-    async def get_city_pollution(
-        self, city: str, country: Optional[str] = None
-    ) -> dict[str, Any]:
-        """Get pollution indices for a city.
-
-        Args:
-            city: City name
-            country: Optional country name
-
-        Returns:
-            Dictionary with pollution data
-        """
-        params = {"query": city}
-        if country:
-            params["country"] = country
-
-        return await self._make_request("city_pollution", params)
+    async def get_country_indices(
+        self, request: modeling.GetCountryIndicesRequest | None = None
+    ) -> modeling.GetCountryIndicesResponse:
+        params = self._prepare_params(request)
+        data = await self._make_request("country_indices", params)
+        return modeling.GetCountryIndicesResponse.model_validate(data)
 
     async def get_city_crime(
-        self, city: str, country: Optional[str] = None
-    ) -> dict[str, Any]:
-        """Get crime statistics for a city.
+        self, request: modeling.GetCityCrimeRequest
+    ) -> modeling.GetCityCrimeResponse:
+        params = self._prepare_params(request)
+        data = await self._make_request("city_crime", params)
+        return modeling.GetCityCrimeResponse.model_validate(data)
 
-        Args:
-            city: City name
-            country: Optional country name
+    async def get_city_healthcare(
+        self, request: modeling.GetCityHealthcareRequest
+    ) -> modeling.GetCityHealthcareResponse:
+        params = self._prepare_params(request)
+        data = await self._make_request("city_healthcare", params)
+        return modeling.GetCityHealthcareResponse.model_validate(data)
 
-        Returns:
-            Dictionary with crime data
-        """
-        params = {"query": city}
-        if country:
-            params["country"] = country
+    async def get_city_pollution(
+        self, request: modeling.GetCityPollutionRequest
+    ) -> modeling.GetCityPollutionResponse:
+        params = self._prepare_params(request)
+        data = await self._make_request("city_pollution", params)
+        return modeling.GetCityPollutionResponse.model_validate(data)
 
-        return await self._make_request("city_crime", params)
+    async def get_city_traffic(
+        self, request: modeling.GetCityTrafficRequest
+    ) -> modeling.GetCityTrafficResponse:
+        params = self._prepare_params(request)
+        data = await self._make_request("city_traffic", params)
+        return modeling.GetCityTrafficResponse.model_validate(data)
 
-    async def get_country_prices(self, country: str) -> dict[str, Any]:
-        """Get average prices for a country.
+    async def get_country_crime(
+        self, request: modeling.GetCountryCrimeRequest | None = None
+    ) -> modeling.GetCountryCrimeResponse:
+        params = self._prepare_params(request)
+        data = await self._make_request("country_crime", params)
+        return modeling.GetCountryCrimeResponse.model_validate(data)
 
-        Args:
-            country: Country name
+    async def get_country_healthcare(
+        self, request: modeling.GetCountryHealthcareRequest | None = None
+    ) -> modeling.GetCountryHealthcareResponse:
+        params = self._prepare_params(request)
+        data = await self._make_request("country_healthcare", params)
+        return modeling.GetCountryHealthcareResponse.model_validate(data)
 
-        Returns:
-            Dictionary with country-level price data
-        """
-        params = {"country": country}
-        return await self._make_request("country_prices", params)
+    async def get_country_pollution(
+        self, request: modeling.GetCountryPollutionRequest | None = None
+    ) -> modeling.GetCountryPollutionResponse:
+        params = self._prepare_params(request)
+        data = await self._make_request("country_pollution", params)
+        return modeling.GetCountryPollutionResponse.model_validate(data)
 
-    async def get_rankings(self, section: str = "cost-of-living") -> dict[str, Any]:
-        """Get city rankings for various categories.
+    async def get_country_traffic(
+        self, request: modeling.GetCountryTrafficRequest | None = None
+    ) -> modeling.GetCountryTrafficResponse:
+        params = self._prepare_params(request)
+        data = await self._make_request("country_traffic", params)
+        return modeling.GetCountryTrafficResponse.model_validate(data)
 
-        Args:
-            section: Section to get rankings for (e.g., 'cost-of-living', 'crime', 'health-care')
+    async def get_rankings_by_city_current(
+        self, request: modeling.GetRankingsByCityCurrentRequest
+    ) -> modeling.GetRankingsByCityCurrentResponse:
+        params = self._prepare_params(request)
+        data = await self._make_request("rankings_by_city_current", params)
+        return modeling.GetRankingsByCityCurrentResponse.model_validate(data)
 
-        Returns:
-            Dictionary with rankings data
-        """
-        params = {"section": section}
-        return await self._make_request("rankings", params)
+    async def get_rankings_by_city_historical(
+        self, request: modeling.GetRankingsByCityHistoricalRequest
+    ) -> modeling.GetRankingsByCityHistoricalResponse:
+        params = self._prepare_params(request)
+        data = await self._make_request("rankings_by_city_historical", params)
+        return modeling.GetRankingsByCityHistoricalResponse.model_validate(data)
 
-    async def get_rankings_by_country(
-        self, country: str, section: str = "cost-of-living"
-    ) -> dict[str, Any]:
-        """Get city rankings within a specific country.
-
-        Args:
-            country: Country name
-            section: Section to get rankings for
-
-        Returns:
-            Dictionary with country-specific rankings
-        """
-        params = {"country": country, "section": section}
-        return await self._make_request("rankings_by_country", params)
+    async def get_rankings_by_country_historical(
+        self, request: modeling.GetRankingsByCountryHistoricalRequest
+    ) -> modeling.GetRankingsByCountryHistoricalResponse:
+        params = self._prepare_params(request)
+        data = await self._make_request("rankings_by_country_historical", params)
+        return modeling.GetRankingsByCountryHistoricalResponse.model_validate(data)
