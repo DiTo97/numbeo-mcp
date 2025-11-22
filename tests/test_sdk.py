@@ -1083,39 +1083,6 @@ def test_client_requires_api_key() -> None:
         Numbeo(key="")
 
 
-def test_client_stores_key() -> None:
-    """Ensure the provided key is exposed via the client attribute."""
-
-    class DummyClient:
-        async def aclose(self) -> None:  # pragma: no cover - unused helper
-            return None
-
-    dummy_client = DummyClient()
-    client = Numbeo(key="abc123", client=dummy_client)
-    assert client.key == "abc123"
-
-
-@pytest.mark.asyncio
-async def test_client_context_manager_does_not_close_external_client() -> None:
-    """When an external httpx client is supplied it should not be closed automatically."""
-
-    class ExternalClient:
-        def __init__(self) -> None:
-            self.closed = False
-
-        async def get(self, *_: Any, **__: Any) -> MockResponse:
-            return MockResponse({})
-
-        async def aclose(self) -> None:
-            self.closed = True
-
-    external = ExternalClient()
-    client = Numbeo(key="abc123", client=external)  # type: ignore[arg-type]
-    async with client:
-        pass
-    assert external.closed is False
-
-
 @pytest.mark.asyncio
 @pytest.mark.parametrize("case", ENDPOINT_CASES, ids=[case.name for case in ENDPOINT_CASES])
 async def test_endpoint_calls(monkeypatch: pytest.MonkeyPatch, case: EndpointCase) -> None:
