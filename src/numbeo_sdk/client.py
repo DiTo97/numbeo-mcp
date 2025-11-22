@@ -57,7 +57,7 @@ class Numbeo:
         # Add API key to query parameters
         params["api_key"] = self.key
 
-        response = await self._client.get(f"{self.URL}/{endpoint}", params=query)
+        response = await self._client.get(f"{self.URL}/{endpoint}", params=params)
         response.raise_for_status()
         return response.json()
 
