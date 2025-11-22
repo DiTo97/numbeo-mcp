@@ -4,7 +4,7 @@ from typing import Any
 
 import httpx
 
-from . import modeling
+from numbeo_sdk import modeling
 
 
 class Numbeo:

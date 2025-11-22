@@ -1,0 +1,17 @@
+[project]
+name = "numbeo-sdk"
+version = "0.1.0"
+description = "Numbeo API SDK, providing data on cost of living, property prices, and crime rates."
+readme = "README.md"
+authors = [
+  { name = "DiTo97", email = "fede97.minutoli@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+  "httpx<1",
+  "pydantic>2,<3"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
